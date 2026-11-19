@@ -1,0 +1,269 @@
+name: Release (Windows / macOS / Linux)
+
+# タグ v<版数>(例 v1.2.0)の push で 3 OS の配布物をビルドし、GitHub リリースに添付する。
+#   - Windows: win-x64 の ZIP / MSI(署名なし)
+#   - macOS  : osx-arm64 / osx-x64 の tar.gz(GitHub の macOS ランナーでビルド)
+#   - Linux  : linux-x64 の tar.gz / .deb
+# 各配布物に <ファイル名>.sha256(`<hash>  <ファイル名>` 形式。shasum -c / sha256sum -c 互換)を付ける。
+# タグは src/Directory.Build.props の <VersionPrefix>(＋<VersionSuffix>)と一致していなければ失敗する。
+# リリースノートは CHANGELOG.md の該当版の節。同じタグのリリースが既にあれば、資産だけを差し替える。
+#
+# PR(配布まわりの変更時)と手動実行(workflow_dispatch)では、ビルドとパッケージ化だけを行い、
+# 配布物は Actions の成果物(artifact)として残す(リリースは作らない)。
+# 手順書: doc/リリース手順-CI.md
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/release.yml'
+      - 'dist/**'
+      - 'src/Directory.Build.props'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_ROLL_FORWARD: LatestMajor
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  prepare:
+    name: 版数の確認・単体テスト
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 版数を読む(タグ push 時はタグと照合)
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          props=src/Directory.Build.props
+          # XML として読む(コメントアウトされた <VersionSuffix> を拾わないように)
+          version="$(python3 - "$props" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          root = ET.parse(sys.argv[1]).getroot()
+          def val(tag):
+              e = root.find(f'.//{tag}')
+              return (e.text or '').strip() if e is not None else ''
+          prefix, suffix = val('VersionPrefix'), val('VersionSuffix')
+          if not prefix:
+              sys.exit('VersionPrefix not found')
+          print(prefix + (f'-{suffix}' if suffix else ''))
+          PY
+          )"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "版数: $version"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            if [ "${GITHUB_REF_NAME}" != "v$version" ]; then
+              echo "::error::タグ ${GITHUB_REF_NAME} と版数 v$version が一致しない($props を確認)"
+              exit 1
+            fi
+          fi
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 単体テスト
+        run: dotnet test src/Gateway.Tests/Gateway.Tests.csproj -c Release
+
+  windows:
+    name: Windows (ZIP / MSI)
+    needs: prepare
+    runs-on: windows-latest
+    env:
+      VER: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: ZIP を作る
+        shell: pwsh
+        run: ./dist/package-zip.ps1 -Version $env:VER
+
+      - name: MSI を作る(WiX は dist/dotnet-tools.json の版を使う)
+        shell: pwsh
+        run: ./dist/build-msi.ps1 -Version $env:VER -SkipPublish
+
+      - name: チェックサム
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Push-Location dist/out
+          foreach ($a in "DataverseGW-$env:VER-win-x64.zip", "DataverseGW-$env:VER-win-x64.msi") {
+            "$((Get-FileHash $a -Algorithm SHA256).Hash.ToLower())  $a" | Out-File "$a.sha256" -Encoding ascii -NoNewline
+            Get-Content "$a.sha256"
+          }
+          Pop-Location
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows
+          if-no-files-found: error
+          path: |
+            dist/out/DataverseGW-*-win-x64.zip
+            dist/out/DataverseGW-*-win-x64.zip.sha256
+            dist/out/DataverseGW-*-win-x64.msi
+            dist/out/DataverseGW-*-win-x64.msi.sha256
+
+  macos:
+    name: macOS (${{ matrix.rid }})
+    needs: prepare
+    # Apple Silicon のランナーで両 RID をビルドする(osx-x64 はクロス発行。署名は SDK のアドホック署名)
+    runs-on: macos-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        rid: [osx-arm64, osx-x64]
+    env:
+      VER: ${{ needs.prepare.outputs.version }}
+      RID: ${{ matrix.rid }}
+      COPYFILE_DISABLE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 発行
+        run: bash dist/publish-mac.sh "$RID"
+
+      - name: 署名の確認
+        run: codesign --verify --verbose "dist/out/app-$RID/DataverseGW"
+
+      - name: tar.gz とチェックサム
+        run: |
+          set -euo pipefail
+          a="DataverseGW-$VER-$RID.tar.gz"
+          tar -czf "dist/out/$a" -C "dist/out/app-$RID" .
+          if tar -tzf "dist/out/$a" | grep -q '\._'; then echo "::error::AppleDouble (._*) が混入"; exit 1; fi
+          cd dist/out
+          shasum -a 256 "$a" > "$a.sha256"
+          cat "$a.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.rid }}
+          if-no-files-found: error
+          path: |
+            dist/out/DataverseGW-*-${{ matrix.rid }}.tar.gz
+            dist/out/DataverseGW-*-${{ matrix.rid }}.tar.gz.sha256
+
+  linux:
+    name: Linux (tar.gz / .deb)
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      VER: ${{ needs.prepare.outputs.version }}
+      RID: linux-x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 発行
+        run: bash dist/publish-linux.sh "$RID"
+
+      - name: tar.gz
+        run: tar -czf "dist/out/DataverseGW-$VER-$RID.tar.gz" -C "dist/out/app-$RID" .
+
+      - name: .deb
+        run: bash dist/package-deb.sh "$RID"
+
+      - name: .deb の導入確認
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y "./dist/out/DataverseGW-$VER-$RID.deb"
+          dpkg -s dataverse-gw | grep -E '^(Status|Version):'
+          test -x /opt/dataverse-gw/DataverseGW
+          readlink -f /usr/bin/dataverse-gw
+
+      - name: チェックサム
+        run: |
+          set -euo pipefail
+          cd dist/out
+          for a in "DataverseGW-$VER-$RID.tar.gz" "DataverseGW-$VER-$RID.deb"; do
+            sha256sum "$a" > "$a.sha256"
+            cat "$a.sha256"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux
+          if-no-files-found: error
+          path: |
+            dist/out/DataverseGW-*-linux-x64.tar.gz
+            dist/out/DataverseGW-*-linux-x64.tar.gz.sha256
+            dist/out/DataverseGW-*-linux-x64.deb
+            dist/out/DataverseGW-*-linux-x64.deb.sha256
+
+  release:
+    name: GitHub リリース
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: [prepare, windows, macos, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VER: ${{ needs.prepare.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: assets
+          merge-multiple: true
+
+      - name: チェックサムの照合
+        run: |
+          set -euo pipefail
+          cd assets
+          ls -l
+          sha256sum -c *.sha256
+
+      - name: リリースノート(CHANGELOG.md の該当節)
+        run: |
+          set -euo pipefail
+          # "## [<版数>]" の見出しの次の行から、次の "## [" または "---" の行の手前まで
+          awk -v ver="$VER" '
+            index($0, "## [" ver "]") == 1 { on = 1; next }
+            on && (/^## \[/ || /^---[[:space:]]*$/) { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md に [$VER] の節が無い(または空)"
+            exit 1
+          fi
+          cat notes.md
+
+      - name: リリースの作成(既にあれば資産を差し替え)
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          prerelease=()
+          case "$VER" in *-*) prerelease=(--prerelease) ;; esac
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "リリース $tag は既にある: 資産を差し替える"
+            gh release upload "$tag" assets/* --clobber
+          else
+            gh release create "$tag" assets/* --title "$tag" --notes-file notes.md --verify-tag "${prerelease[@]}"
+          fi
+          gh release view "$tag"

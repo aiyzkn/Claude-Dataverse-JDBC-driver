@@ -29,6 +29,7 @@ Dataverse GW の配布物を作るためのスクリプト群です。
 - `package-zip.ps1` / `build-msi.ps1` は `-Version` 省略時に props の `VersionPrefix` を自動で読む
   （明示的に `-Version` を渡せば上書き可）。
 - リリース手順: ① `VersionPrefix` を更新 → ② `publish.ps1` → ③ `package-zip.ps1`（必要なら `build-msi.ps1`）。
+- **通常のリリースは CI で行う**: タグ `v<版数>` を push すると、3 OS の配布物を作って GitHub リリースに添付する（`doc/リリース手順-CI.md`）。
 
 ## 成果物の種類
 1. **ポータブル ZIP**（推奨・追加ツール不要）: 自己完結 exe ＋ インストールスクリプト
@@ -115,6 +116,8 @@ GPO: `コンピューターの構成 > ポリシー > Windows 設定 > セキュ
 |---|---|
 | `publish.ps1` | self-contained single-file publish（win-x64） |
 | `publish-mac.sh` | self-contained single-file publish（macOS。osx-arm64 既定 / osx-x64。版数は Windows と共通） |
+| `publish-linux.sh` | self-contained single-file publish（Linux。linux-x64 既定 / linux-arm64。版数は共通） |
+| `package-deb.sh` | Linux 版の .deb 生成（`dpkg-deb`。`/opt/dataverse-gw` ＋ `/usr/bin/dataverse-gw`） |
 | `package-zip.ps1` | ポータブル ZIP 生成 |
 | `build-msi.ps1` | WiX v4 で MSI 生成（未導入時はローカルツール取得） |
 | `sign.ps1` | signtool によるコード署名（証明書は実行時指定） |
