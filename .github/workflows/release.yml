@@ -77,7 +77,12 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: 単体テスト
-        run: dotnet test src/Gateway.Tests/Gateway.Tests.csproj -c Release
+        # ci.yml と同じく、配布物に同梱する .NET 8 ランタイムで動かす(新しいメジャーへ繰り上げない)
+        env:
+          DOTNET_ROLL_FORWARD: Minor
+        run: |
+          dotnet --list-runtimes
+          dotnet test src/Gateway.Tests/Gateway.Tests.csproj -c Release
 
   windows:
     name: Windows (ZIP / MSI)
