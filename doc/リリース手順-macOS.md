@@ -1,5 +1,8 @@
 # リリース手順（macOS 版バイナリの公開）
 
+> **通常のリリースは CI で行う**（タグ `v<版数>` の push で Windows / macOS / Linux の配布物を自動で作成・公開する。`doc/リリース手順-CI.md`）。
+> 本手順は、CI が使えないときや配布物を手元で作り直すときの手作業の手順。
+
 macOS で `dist/publish-mac.sh` を使ってビルドし、Windows 版と同じ GitHub リリースページに公開するまでの操作手順。
 Windows 版の手順・ポリシーは `dist/README.md`、機能内容は `CHANGELOG.md` を参照。
 

@@ -8,7 +8,9 @@
 
 ## [Unreleased]
 
-（未リリースの変更はまだありません）
+### 追加（Added）
+- **リリースの CI 化**: タグ `v<版数>` の push で GitHub Actions（`.github/workflows/release.yml`）が Windows（ZIP / MSI）・macOS（osx-arm64 / osx-x64 の tar.gz。macOS ランナーでビルド）・Linux（linux-x64 の tar.gz / .deb）を作り、各 `.sha256` とともに GitHub リリースに添付する。タグと `src/Directory.Build.props` の版数が一致しなければ失敗する。リリースノートは本ファイルの該当版の節。手順は [doc/リリース手順-CI.md](doc/リリース手順-CI.md)。
+- **Linux 版の配布物**: `dist/publish-linux.sh`（自己完結 single-file）と `dist/package-deb.sh`（.deb。`/opt/dataverse-gw` に配置し、コマンド `dataverse-gw` を用意）。
 
 ## [1.1.0] - 2026-07-28
 

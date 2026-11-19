@@ -1,5 +1,8 @@
 # リリース手順（Windows 版バイナリの公開）
 
+> **通常のリリースは CI で行う**（タグ `v<版数>` の push で Windows / macOS / Linux の配布物を自動で作成・公開する。`doc/リリース手順-CI.md`）。
+> 本手順は、CI が使えないときや配布物を手元で作り直すときの手作業の手順。
+
 Windows で `dist\package-zip.ps1`（必要に応じて `dist\build-msi.ps1`）を使ってビルド・パッケージ化し、
 GitHub リリースページに公開するまでの操作手順。
 配布ポリシー・スクリプトの詳細は `dist/README.md`、機能内容は `CHANGELOG.md`、macOS 版は `doc/リリース手順-macOS.md` を参照。
