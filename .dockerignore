@@ -1,0 +1,14 @@
+# Docker ビルドコンテキストから除外(ビルドは SDK イメージ内で restore/publish するため成果物は不要)
+**/bin/
+**/obj/
+.git/
+.github/
+.vs/
+bench/
+design/
+requirements/
+doc/
+dist/
+*.md
+**/*.user
+**/TestResults/

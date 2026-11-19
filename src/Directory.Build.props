@@ -1,0 +1,26 @@
+<Project>
+  <!--
+    製品(src/ 配下の全プロジェクト)共通のバージョン・メタデータの単一管理点。
+    リリース時はここの <VersionPrefix> だけを更新すれば、全アセンブリ(AssemblyVersion/FileVersion/
+    InformationalVersion)と配布物(ZIP/MSI のファイル名)に一貫して反映される。
+    配布スクリプト(dist/package-zip.ps1・dist/build-msi.ps1)も既定でこの値を読む。
+    プレリリースを付ける場合は <VersionSuffix>(例 rc.1)を設定する(Version=Prefix-Suffix となる)。
+    ※ bench/ 等 src/ 外のプロジェクトには適用されない(スコープは src/ 配下)。
+
+    バージョン採番ポリシー:
+      - セマンティック・バージョニング(SemVer 2.0.0 / MAJOR.MINOR.PATCH)に従う。
+        MAJOR=後方非互換の変更、MINOR=後方互換の機能追加、PATCH=後方互換のバグ修正。
+        プレリリースは <VersionSuffix>(例 rc.1)、ビルドメタデータは +<sha>(自動付与)。
+      - **ユーザーが明示的に bump up を指示しない限り、この値を変更しないこと。**
+        機能追加・修正のたびに自動で上げてはならない。リリース判断はユーザーが行う。
+  -->
+  <PropertyGroup>
+    <!-- SemVer(MAJOR.MINOR.PATCH)。変更はユーザーの明示的な bump up 指示があった場合のみ。 -->
+    <VersionPrefix>1.1.0</VersionPrefix>
+    <!-- <VersionSuffix></VersionSuffix> -->
+    <Company>Dataverse GW</Company>
+    <Product>Dataverse GW</Product>
+    <Authors>Dataverse GW</Authors>
+    <Copyright>Copyright (c) Dataverse GW</Copyright>
+  </PropertyGroup>
+</Project>

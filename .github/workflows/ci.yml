@@ -1,0 +1,32 @@
+name: CI (build + tests / 性能リグレッション回帰)
+
+# 性能リグレッション CI(3.3.1): 実 Dataverse は資格情報が無く・サービス保護で throttle 律速のため
+# CI では実行しない。CI は「ビルド健全性 + 単体テスト(パーサ/型変換/名前解決/進捗/ドライラン/本番ガード等の
+# ローカルなホットパス・ロジック)」を回帰ゲートとして守る。E2E スループットは dev 実機での NBomber 負荷試験
+# (bench/Gateway.LoadTest, 手動/スケジュール)で計測する(`doc/性能試験-自動化.md`)。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore & test (unit)
+        run: dotnet test src/Gateway.Tests/Gateway.Tests.csproj -c Release
+
+      - name: Build host (self-contained publish は配布時のみ)
+        run: dotnet build src/Gateway.Host/Gateway.Host.csproj -c Release
+
+      - name: Build load-test harness (NBomber, 実行はしない)
+        run: dotnet build bench/Gateway.LoadTest/Gateway.LoadTest.csproj -c Release

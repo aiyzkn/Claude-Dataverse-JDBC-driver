@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Gateway.Checkpoint/Gateway.Checkpoint.csproj" />
+  <Project Path="Gateway.Core/Gateway.Core.csproj" />
+  <Project Path="Gateway.Dataverse/Gateway.Dataverse.csproj" />
+  <Project Path="Gateway.Flight/Gateway.Flight.csproj" />
+  <Project Path="Gateway.Host/Gateway.Host.csproj" />
+  <Project Path="Gateway.Tests/Gateway.Tests.csproj" />
+</Solution>

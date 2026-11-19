@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# シェルスクリプトは常に LF(CRLF だと macOS/Linux で shebang が壊れ実行不可になる)
+*.sh text eol=lf
+

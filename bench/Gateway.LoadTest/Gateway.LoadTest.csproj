@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Gateway.LoadTest</RootNamespace>
+    <!-- 負荷試験専用。CI の通常ビルド/テストには含めるが Dataverse 実機が必要なため実行は手動/スケジュール -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NBomber" Version="5.8.0" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- FlightClient と生成済み FlightSql コマンド型(Gateway.Flight.Protocol.Sql)を再利用 -->
+    <ProjectReference Include="..\..\src\Gateway.Flight\Gateway.Flight.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+// Apache Arrow Flight SQL プロトコルのうち、ゲートウェイが解釈するメッセージの抜粋。
+// ワイヤ互換性のため package 名・メッセージ名・フィールド番号は本家
+// apache/arrow の format/FlightSql.proto と一致させている(Any の type_url 照合)。
+package arrow.flight.protocol.sql;
+
+option csharp_namespace = "Gateway.Flight.Protocol.Sql";
+
+message CommandStatementQuery {
+  string query = 1;
+  bytes transaction_id = 2;
+}
+
+message CommandGetSqlInfo {
+  repeated uint32 info = 1;
+}
+
+message CommandGetCatalogs {
+}
+
+message CommandGetDbSchemas {
+  optional string catalog = 1;
+  optional string db_schema_filter_pattern = 2;
+}
+
+message CommandGetTables {
+  optional string catalog = 1;
+  optional string db_schema_filter_pattern = 2;
+  optional string table_name_filter_pattern = 3;
+  repeated string table_types = 4;
+  bool include_schema = 5;
+}
+
+message CommandGetTableTypes {
+}
+
+message TicketStatementQuery {
+  bytes statement_handle = 1;
+}
+
+message CommandStatementUpdate {
+  string query = 1;
+  bytes transaction_id = 2;
+}
+
+message ActionCreatePreparedStatementRequest {
+  string query = 1;
+  bytes transaction_id = 2;
+}
+
+message ActionCreatePreparedStatementResult {
+  bytes prepared_statement_handle = 1;
+  bytes dataset_schema = 2;
+  bytes parameter_schema = 3;
+}
+
+message ActionClosePreparedStatementRequest {
+  bytes prepared_statement_handle = 1;
+}
+
+message CommandPreparedStatementQuery {
+  bytes prepared_statement_handle = 1;
+}
+
+message CommandPreparedStatementUpdate {
+  bytes prepared_statement_handle = 1;
+}
+
+message DoPutUpdateResult {
+  int64 record_count = 1;
+}
