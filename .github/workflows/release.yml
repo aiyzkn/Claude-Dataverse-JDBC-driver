@@ -193,6 +193,7 @@ jobs:
       - name: .deb の導入確認
         run: |
           set -euo pipefail
+          sudo apt-get update
           sudo apt-get install -y "./dist/out/DataverseGW-$VER-$RID.deb"
           dpkg -s dataverse-gw | grep -E '^(Status|Version):'
           test -x /opt/dataverse-gw/DataverseGW

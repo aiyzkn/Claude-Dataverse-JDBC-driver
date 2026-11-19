@@ -54,7 +54,7 @@ Priority: optional
 Architecture: $ARCH
 Maintainer: Dataverse GW
 Installed-Size: $INSTALLED_KB
-Depends: libc6 (>= 2.27), libgcc-s1 | libgcc1, libstdc++6, zlib1g, libssl3 | libssl3t64 | libssl1.1, libicu76 | libicu74 | libicu72 | libicu71 | libicu70 | libicu67 | libicu66 | libicu63
+Depends: libc6 (>= 2.27), libgcc-s1 | libgcc1, libstdc++6, zlib1g, libssl3 | libssl3t64 | libssl1.1, libicu80 | libicu78 | libicu77 | libicu76 | libicu74 | libicu72 | libicu71 | libicu70 | libicu67 | libicu66 | libicu63
 Description: Microsoft Dataverse 用 SQL ドライバ (Arrow Flight SQL ゲートウェイ)
  DBeaver・DataGrip・Python(ADBC) などの汎用 SQL クライアントから
  Microsoft Dataverse へ CRUD を行うためのゲートウェイ。
